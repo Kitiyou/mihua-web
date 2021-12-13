@@ -1,24 +1,9 @@
-# mihua-web
+# mihua-web 秘话-前端
 
-## Project setup
-```
-npm install
-```
+一个定时发布话语的网站，用户可以在上面分享一些话语并设置可公开时间。
 
-### Compiles and hot-reloads for development
-```
-npm run serve
-```
+前端基于 Vue 全家桶 + Element UI，后端基于 Node.js + Express + Mongoose + MongoDB 实现。
 
-### Compiles and minifies for production
-```
-npm run build
-```
+项目演示地址：https://mi.kitiyou.com/
 
-### Lints and fixes files
-```
-npm run lint
-```
-
-### Customize configuration
-See [Configuration Reference](https://cli.vuejs.org/config/).
+此项目为前端用户界面，后端项目地址：https://github.com/Kitiyou/mihua-server
