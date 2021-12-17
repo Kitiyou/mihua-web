@@ -8,44 +8,25 @@
         <span class="add-words"><i class="el-icon-plus"></i>添加新话语</span>
       </el-card>
       <el-card v-for="words in wordsList" :key="words._id" class="words-card" :body-style="{ padding: '8px' }">
-        <div>
+        <div class="words-card-header">
           <el-popconfirm title="确定删除吗？" @confirm="handleDelete(words._id)">
             <i slot="reference" class="el-icon-close delete-button"></i>
           </el-popconfirm>
           <i class="el-icon-share share-button" @click="handleShare(words._id)"></i>
+          <i class="el-icon-edit edit-button" @click="handleEdit(words)"></i>
           <h3 class="words-title">{{ words.title }}</h3>
         </div>
         <div class="words-content">{{ words.content }}</div>
         <div class="words-time">公开时间：{{ words.publishTime | fmtDateTime }}</div>
       </el-card>
     </div>
-    <el-dialog :visible.sync="addDialogVisible" :width="'max(300px, 50%)'" title="添加话语">
-      <el-form :model="addForm" :rules="addFormRules" ref="addForm" @submit.native.prevent>
-        <el-form-item prop="title">
-          <div>标题</div>
-          <el-input v-model="addForm.title" class="title-input" maxlength="10" show-word-limit></el-input>
-        </el-form-item>
-        <el-form-item prop="publishTime">
-          <div>公开时间</div>
-          <el-date-picker v-model="addForm.publishTime" type="datetime" placeholder="选择日期时间"></el-date-picker>
-        </el-form-item>
-        <el-form-item prop="content">
-          <div>话语内容</div>
-          <el-input
-            class="form-textarea"
-            v-model="addForm.content"
-            type="textarea"
-            :autosize="{ minRows: 4, maxRows: 10}"
-            maxlength="1000"
-            show-word-limit
-          ></el-input>
-        </el-form-item>
-      </el-form>
-      <span slot="footer" class="dialog-footer">
-        <el-button @click="addDialogVisible = false">取 消</el-button>
-        <el-button type="primary" @click="handleAddConfirm">添 加</el-button>
-      </span>
-    </el-dialog>
+    <words-dialog
+      :visible.sync="editDialogVisible"
+      :form-data="editFormData"
+      @confirm="handleWordsConfirm"
+      :width="'max(300px, 50%)'"
+      :title="editDialogTitle"
+    />
     <share-dialog :visible.sync="shareDialogVisible" :share-id="shareId"/>
   </div>
 </template>
@@ -53,9 +34,10 @@
 <script>
 import * as wordsApi from '../../api/words'
 import { formatDateTime } from '../../utils/date'
+import WordsDialog from '../../components/mywords/WordsDialog'
 import ShareDialog from '../../components/mywords/ShareDialog'
 
-function defaultAddForm() {
+function defaultEditFormData() {
   return {
     title: '',
     publishTime: null,
@@ -64,23 +46,14 @@ function defaultAddForm() {
 }
 
 export default {
-  components: { ShareDialog },
+  components: { WordsDialog, ShareDialog },
   data() {
     return {
       wordsList: [],
-      addDialogVisible: false,
-      addForm: defaultAddForm(),
-      addFormRules: {
-        title: [
-          { required: true, message: '请输入标题', trigger: 'blur' }
-        ],
-        publishTime: [
-          { required: true, message: '请选择公开时间', trigger: 'blur' }
-        ],
-        content: [
-          { required: true, message: '请输入话语内容', trigger: 'blur' }
-        ]
-      },
+      editDialogVisible: false,
+      editDialogTitle: '',
+      editingWordsId: null,
+      editFormData: defaultEditFormData(),
       shareDialogVisible: false,
       shareId: 0
     }
@@ -105,32 +78,55 @@ export default {
       }
     },
     handleAdd() {
-      this.addDialogVisible = true;
-      this.addForm = defaultAddForm();
+      this.editDialogVisible = true;
+      this.editDialogTitle = '添加话语';
+      this.editingWordsId = null;
+      this.editFormData = defaultEditFormData();
     },
-    handleAddConfirm() {
-      this.$refs.addForm.validate(async valid => {
-        if (valid) {
-          try {
-            const res = await wordsApi.addWords(this.addForm);
-            const resData = res.data;
-            if (resData.code == 0) {
-              this.$message({
-                message: '添加成功',
-                type: 'success'
-              });
-              this.addDialogVisible = false;
-              this.getList();
-            }
-            else {
-              throw new Error(resData.msg);
-            }
+    handleEdit(words) {
+      this.editDialogVisible = true;
+      this.editDialogTitle = '编辑话语';
+      this.editingWordsId = words._id;
+      this.editFormData.title = words.title;
+      this.editFormData.publishTime = words.publishTime;
+      this.editFormData.content = words.content;
+    },
+    async handleWordsConfirm() {
+      try {
+        if (this.editingWordsId) { //提交编辑话语
+          const res = await wordsApi.updateWords(this.editingWordsId, this.editFormData);
+          const resData = res.data;
+          if (resData.code == 0) {
+            this.$message({
+              message: '编辑成功',
+              type: 'success'
+            });
+            this.editDialogVisible = false;
+            this.getList();
           }
-          catch (err) {
-            this.$message.error(err.message);
+          else {
+            throw new Error(resData.msg);
           }
         }
-      });
+        else { //提交添加话语
+          const res = await wordsApi.addWords(this.editFormData);
+          const resData = res.data;
+          if (resData.code == 0) {
+            this.$message({
+              message: '添加成功',
+              type: 'success'
+            });
+            this.editDialogVisible = false;
+            this.getList();
+          }
+          else {
+            throw new Error(resData.msg);
+          }
+        }
+      }
+      catch (err) {
+        this.$message.error(err.message);
+      }
     },
     async handleDelete(wordsId) {
       try {
@@ -204,11 +200,18 @@ export default {
   font-size: 13px;
   color: #888;
 }
+.words-card-header i {
+  margin-left: 4px;
+}
+.edit-button {
+  float: right;
+  cursor: pointer;
+  color: #3b6edd;
+}
 .share-button {
   float: right;
   cursor: pointer;
   color: #3b6edd;
-  margin-right: 4px;
 }
 .delete-button {
   float: right;
@@ -224,14 +227,5 @@ export default {
   top: 50%;
   transform: translateY(-50%);
   color: #606266;
-}
-.title-input {
-  width: 220px;
-}
-.el-form-item {
-  margin-bottom: 12px;
-}
-.form-textarea {
-  line-height: 12px;
 }
 </style>

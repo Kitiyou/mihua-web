@@ -19,6 +19,13 @@ export function addWords(data) {
     data
   });
 }
+export function updateWords(id, data) {
+  return request({
+    url:`/words/${id}`,
+    method:'put',
+    data
+  });
+}
 export function deleteWords(id) {
   return request({
     url:`/words/${id}`,
