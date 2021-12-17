@@ -99,5 +99,6 @@ export default {
 }
 .words-content {
   padding: 8px;
+  white-space: pre-wrap;
 }
 </style>
